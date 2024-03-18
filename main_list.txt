@@ -1,0 +1,52 @@
+int main() {
+    cout << "Register size in bytes for __m256i: " << DIV256 << endl;
+    cout << "Register size in bytes for __m512i: " << DIV512 << endl;
+
+    // Use the largest size requirement (for AVX-512) as the base for all operations
+    unsigned size = DIV512 * 1000 * 1000;  // This size is now sufficient for both AVX-256 and AVX-512
+
+    // Unified arrays
+    uint8_t* a = new uint8_t[size];
+    uint8_t* b = new uint8_t[size];
+    uint8_t* cNon = new uint8_t[size];
+    uint8_t* cAVX256 = new uint8_t[size];
+    uint8_t* cAVX512 = new uint8_t[size];
+
+    default_random_engine generator;
+    uniform_int_distribution<uint32_t> distribution(0, 127);
+    generator.seed(static_cast<unsigned int>(chrono::system_clock::now().time_since_epoch().count()));
+
+    // Fill arrays
+    for (unsigned i = 0; i < size; ++i) {
+        a[i] = static_cast<uint8_t>(distribution(generator));
+        b[i] = static_cast<uint8_t>(distribution(generator));
+    }
+
+    memset(cNon, 0, size);
+    memset(cAVX256, 0, size);
+    memset(cAVX512, 0, size);
+
+    auto tNon = addNonAVX(a, b, cNon, size);
+    auto tAVX256 = addAVX256(a, b, cAVX256, size);
+    auto tAVX512 = addAVX512(a, b, cAVX512, size);
+
+    // Verify results and calculate speedup
+    for (unsigned i = 0; i < size; ++i) {
+        assert(cNon[i] == cAVX256[i]);
+        assert(cNon[i] == cAVX512[i]);
+    }
+
+    cout << "same result :)" << endl;
+    cout << "nonAVX time: " << tNon << "us" << endl;
+    cout << "AVX256 time: " << tAVX256 << "us" << endl;
+    cout << "AVX512 time: " << tAVX512 << "us" << endl;
+    cout << "Speedup 256 = : " << (double)tNon / tAVX256 << endl;
+    cout << "Speedup 512 = : " << (double)tNon / tAVX512 << endl;
+
+    // Cleanup
+    delete[] a;
+    delete[] b;
+    delete[] cNon;
+    delete[] cAVX256;
+    delete[] cAVX512;
+}
